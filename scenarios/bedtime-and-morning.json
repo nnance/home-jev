@@ -1,0 +1,38 @@
+{
+  "name": "Bedtime and morning",
+  "description": "Going to sleep shuts the house down; waking opens the blinds.",
+  "start": {
+    "time": "22:30",
+    "levels": {
+      "living.ceiling": "standard",
+      "living.lamp": "soft",
+      "kitchen.can": "standard",
+      "living.blinds": "open",
+      "kitchen.blinds": "open"
+    }
+  },
+  "steps": [
+    {
+      "event": { "type": "sleep" },
+      "expect": {
+        "living.ceiling": "off",
+        "living.lamp": "off",
+        "kitchen.can": "off",
+        "living.blinds": "closed",
+        "kitchen.blinds": "closed",
+        "bedroom.blinds": "closed"
+      }
+    },
+    {
+      "wait": 480,
+      "event": { "type": "wake" },
+      "expect": {
+        "living.blinds": "open",
+        "kitchen.blinds": "open",
+        "bedroom.blinds": "open",
+        "living.ceiling": "off",
+        "bedroom.ceiling": "off"
+      }
+    }
+  ]
+}

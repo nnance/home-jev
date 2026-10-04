@@ -1,106 +1,139 @@
-import { pathToFileURL } from "node:url";
-import type { StateObject } from "./types.js";
+import { readdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { createDecide, formatTime, NO_CHANGE, restingLevel } from "./jev.js";
+import { Simulator } from "./simulator.js";
+import type { EventResult, Expectation, HouseConfig, Scenario, SimEvent } from "./types.js";
 
-const DEFAULT_STATE: StateObject = {
-  house: {
-    rooms: [
-      {
-        name: "Kitchen",
-        accessories: [
-          { name: "can", description: "overhead dimmable can lights", state: 0 },
-          { name: "pendant", description: "overhead dimmable pendant lights", state: 0 },
-          { name: "blinds", description: "0 is closed and 1 is open", state: 0 },
-          { name: "undercounter", description: "under counter dimmable strip lighting", state: 0 },
-          { name: "motion detector", description: "detects motion in the room", state: 0 },
-        ],
-      },
-    ],
-    state: { asleep: true, isaway: false },
-    rules: [
-      "When the house is asleep use soft indirect lighting when possible",
-      "Only can lights and undercounter lights should come on when motion is detected",
-      "Can lights should never be brighter than 60%",
-    ],
-    event: { room: "kitchen", type: "motion detected" },
-  },
-  time: "20:32:00",
-};
+const HOUSE_FILE = "house.json";
+const SCENARIO_DIR = "scenarios";
 
-export async function runSystemOne(state: StateObject): Promise<unknown> {
-  const apiKey = process.env.TYPESAFE_API_KEY;
-  if (!apiKey) {
-    throw new Error("TYPESAFE_API_KEY is not set");
-  }
-
-  const response = await fetch("https://api.typesafe.ai/v1/systemone", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      state,
-      model: "jev-latest",
-      questions: {
-        action: {
-          type: "choice",
-          instructions: "Should an action be taken and if so which one?",
-          criteria: {
-            none: "No action needed",
-            set_accessory: "Set the recommended value of an accessory in a room",
-          },
-        },
-        which_room: {
-          type: "choice",
-          instructions: "Select the room to take action on",
-          criteria: {
-            none: "no room",
-            kitchen: "kitchen",
-            living: "living room",
-            entry: "entry way",
-          },
-        },
-        which_accessory: {
-          type: "choice",
-          instructions: "Following the rules of the house and based on the current state of the house, select the accessory to take action on",
-          criteria: {
-            none: "no accessory",
-            can: "overhead dimmable can lights",
-            pendent: "overhead dimmable pendant lights",
-            blinds: "powered blinds",
-            undercounter: "indirect dimmable strip lighting",
-          },
-        },
-        recommend_value: {
-          type: "choice",
-          instructions: "Recommend the value to set the accessory to if action is needed",
-          criteria: {
-            null: "no change",
-            "0%": "the light is off or the blind is closed",
-            "30%": "soft lighting or slightly open blind",
-            "60%": "standard lighting or mostly open blind",
-            "100%": "full lighting or fully open blind",
-          },
-        },
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Request failed: ${response.status} ${await response.text()}`);
-  }
-
-  return response.json();
+async function readJson<T>(path: string): Promise<T> {
+  return JSON.parse(await readFile(path, "utf8")) as T;
 }
 
-const isMainModule =
-  process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
-
-if (isMainModule) {
-  try {
-    console.log(JSON.stringify(await runSystemOne(DEFAULT_STATE), null, 2));
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : error);
-    process.exitCode = 1;
+function describe(house: HouseConfig, event: SimEvent): string {
+  const room = "room" in event ? (house.rooms.find((r) => r.id === event.room)?.name ?? event.room) : "";
+  switch (event.type) {
+    case "motion":
+      return `motion detected in ${room}`;
+    case "button":
+      return `wall button pressed in ${room}`;
+    case "motion_timeout":
+      return `no motion in ${room} for ${house.motionTimeoutMinutes} minutes`;
+    case "sleep":
+      return "house goes to sleep";
+    case "wake":
+      return "house wakes up";
+    case "leave":
+      return "everyone leaves";
+    case "arrive":
+      return "someone arrives home";
   }
+}
+
+function printResult(house: HouseConfig, result: EventResult, verbose: boolean): void {
+  console.log(`  [${formatTime(result.minutes)}] ${describe(house, result.event)}`);
+  if (result.skipped) {
+    console.log(`      (not sent to Jev: ${result.skipped})`);
+    return;
+  }
+  if (result.changes.length === 0) console.log("      no changes");
+  for (const change of result.changes) {
+    console.log(`      ${change.key.padEnd(24)} ${change.from} -> ${change.to}  (p=${change.probability.toFixed(2)})`);
+  }
+  for (const change of result.uncertain) {
+    console.log(
+      `      ${change.key.padEnd(24)} unsure, left at ${change.from} (leaned ${change.to}, p=${change.probability.toFixed(2)})`,
+    );
+  }
+  if (verbose) {
+    for (const decision of result.decisions) {
+      const probabilities = Object.entries(decision.probabilities)
+        .filter(([, p]) => p >= 0.01)
+        .sort((a, b) => b[1] - a[1])
+        .map(([option, p]) => `${option}=${p.toFixed(2)}`)
+        .join(" ");
+      const marker = decision.choice === NO_CHANGE ? " " : "*";
+      console.log(`      ${marker} ${decision.key.padEnd(22)} ${probabilities}`);
+    }
+  }
+}
+
+function meets(expectation: Expectation, level: string, resting: string): boolean {
+  if (Array.isArray(expectation)) return expectation.includes(level);
+  if (expectation === "on") return level !== resting;
+  return expectation === level;
+}
+
+interface Totals {
+  passed: number;
+  failed: number;
+  requests: number;
+  inputTokens: number;
+}
+
+async function runScenario(house: HouseConfig, scenario: Scenario, verbose: boolean, totals: Totals): Promise<void> {
+  const simulator = new Simulator(house, createDecide(), scenario.start);
+  const mode = [scenario.start.asleep ? "asleep" : "awake", scenario.start.away ? "away" : "home"].join(", ");
+  console.log(`\n${scenario.name}  (starts ${scenario.start.time}, ${mode})`);
+  if (scenario.description) console.log(`  ${scenario.description}`);
+
+  for (const step of scenario.steps) {
+    const results: EventResult[] = [];
+    if (step.wait) {
+      console.log(`  ... ${step.wait} minutes pass`);
+      results.push(...(await simulator.advance(step.wait)));
+    }
+    if (step.event) results.push(await simulator.fire(step.event));
+
+    for (const result of results) {
+      printResult(house, result, verbose);
+      if (!result.skipped) totals.requests += 1;
+      totals.inputTokens += result.inputTokens;
+    }
+
+    for (const [key, expectation] of Object.entries(step.expect ?? {})) {
+      const level = simulator.accessories.get(key)?.level ?? "";
+      const ok = meets(expectation, level, restingLevel(simulator.kindOf(key)));
+      const wanted = Array.isArray(expectation) ? expectation.join(" or ") : expectation;
+      if (ok) {
+        totals.passed += 1;
+        console.log(`      PASS ${key} is ${level}`);
+      } else {
+        totals.failed += 1;
+        console.log(`      FAIL ${key} is ${level}, expected ${wanted}`);
+      }
+    }
+  }
+}
+
+async function main(): Promise<void> {
+  const args = process.argv.slice(2);
+  const verbose = args.includes("--verbose");
+  let files = args.filter((arg) => !arg.startsWith("--"));
+  if (files.length === 0) {
+    files = (await readdir(SCENARIO_DIR))
+      .filter((name) => name.endsWith(".json"))
+      .sort()
+      .map((name) => join(SCENARIO_DIR, name));
+  }
+
+  const house = await readJson<HouseConfig>(HOUSE_FILE);
+  const totals: Totals = { passed: 0, failed: 0, requests: 0, inputTokens: 0 };
+  for (const file of files) {
+    await runScenario(house, await readJson<Scenario>(file), verbose, totals);
+  }
+
+  console.log(
+    `\n${totals.passed} expectations passed, ${totals.failed} failed across ${files.length} scenarios ` +
+      `(${totals.requests} Jev requests, ${totals.inputTokens} input tokens)`,
+  );
+  if (totals.failed > 0) process.exitCode = 1;
+}
+
+try {
+  await main();
+} catch (error) {
+  console.error(error instanceof Error ? error.message : error);
+  process.exitCode = 1;
 }

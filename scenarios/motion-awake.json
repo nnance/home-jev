@@ -1,0 +1,20 @@
+{
+  "name": "Motion while awake",
+  "description": "Evening motion in the kitchen turns on the main lights, which time out when the room goes quiet.",
+  "start": { "time": "19:30", "levels": { "kitchen.blinds": "open", "living.blinds": "open" } },
+  "steps": [
+    {
+      "event": { "type": "motion", "room": "kitchen" },
+      "expect": {
+        "kitchen.can": "standard",
+        "kitchen.pendant": "off",
+        "kitchen.blinds": "open",
+        "living.ceiling": "off",
+        "entry.ceiling": "off"
+      }
+    },
+    { "wait": 3, "event": { "type": "motion", "room": "kitchen" }, "expect": { "kitchen.can": "standard" } },
+    { "wait": 4, "expect": { "kitchen.can": "standard" } },
+    { "wait": 2, "expect": { "kitchen.can": "off", "kitchen.blinds": "open" } }
+  ]
+}
