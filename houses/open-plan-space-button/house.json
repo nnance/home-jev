@@ -1,0 +1,159 @@
+{
+  "name": "Open plan, whole-space button",
+  "description": "The same house as open-plan, but a wall button in the open space toggles the whole space instead of one room.",
+  "motionTimeoutMinutes": 5,
+  "spaces": [
+    {
+      "id": "main",
+      "name": "Main Floor",
+      "rooms": [
+        "kitchen",
+        "entry",
+        "dining",
+        "living"
+      ]
+    }
+  ],
+  "rules": [
+    "The rooms of an open space act together for motion: motion in any room of an open space counts as motion in every room of that open space.",
+    "When motion is detected and the house is awake, turn on the main overhead lights at standard in the room with the motion and in every other room of the same open space. Other lights are left as they are.",
+    "When motion is detected and the house is asleep, turn on only the indirect lights, at soft, in the room with the motion and in every other room of the same open space. Main overhead lights and decorative lights stay off.",
+    "Motion never changes a light that is already on.",
+    "Motion never changes anything outside the room with the motion and its open space.",
+    "When motion is detected while the house is away, change nothing.",
+    "In a room that is part of an open space, the wall button acts on every room of that open space. In a room that is not part of an open space, it acts only on its own room.",
+    "When the wall button is pressed in an open space where all lights are off, turn on only the main overhead lights in every room of that open space: at standard if the house is awake, at soft if the house is asleep. The button never turns on indirect or decorative lights.",
+    "When the wall button is pressed in an open space where at least one light is on, turn off every light in every room of that open space.",
+    "When the wall button is pressed in a room that is not part of an open space and all its lights are off, turn on its main overhead lights: at standard if the house is awake, at soft if the house is asleep.",
+    "When the wall button is pressed in a room that is not part of an open space and at least one of its lights is on, turn off every light in that room.",
+    "On a motion timeout, turn off the lights in the room or open space that timed out that were turned on by motion. Lights that were turned on by the button stay as they are, and nothing outside that room or open space changes.",
+    "When the house goes to sleep, turn off every light in every room and close all blinds.",
+    "When the house wakes up, open all blinds. Lights are left as they are.",
+    "When everyone leaves, turn off every light in every room.",
+    "When someone arrives home, change nothing. Lights come on later from motion or the wall button.",
+    "Blinds only change when the house goes to sleep or wakes up."
+  ],
+  "rooms": [
+    {
+      "id": "kitchen",
+      "name": "Kitchen",
+      "accessories": [
+        {
+          "id": "can",
+          "kind": "light",
+          "description": "main overhead can lights"
+        },
+        {
+          "id": "pendant",
+          "kind": "light",
+          "description": "decorative pendant lights over the island"
+        },
+        {
+          "id": "undercounter",
+          "kind": "light",
+          "description": "indirect under-counter strip lighting"
+        },
+        {
+          "id": "blinds",
+          "kind": "blinds",
+          "description": "powered window blinds"
+        }
+      ]
+    },
+    {
+      "id": "entry",
+      "name": "Entry",
+      "accessories": [
+        {
+          "id": "ceiling",
+          "kind": "light",
+          "description": "main overhead ceiling light"
+        },
+        {
+          "id": "baseboard",
+          "kind": "light",
+          "description": "indirect baseboard night lighting"
+        }
+      ]
+    },
+    {
+      "id": "dining",
+      "name": "Dining Room",
+      "accessories": [
+        {
+          "id": "chandelier",
+          "kind": "light",
+          "description": "main overhead chandelier"
+        },
+        {
+          "id": "blinds",
+          "kind": "blinds",
+          "description": "powered window blinds"
+        }
+      ]
+    },
+    {
+      "id": "living",
+      "name": "Living Room",
+      "accessories": [
+        {
+          "id": "ceiling",
+          "kind": "light",
+          "description": "main overhead ceiling lights"
+        },
+        {
+          "id": "lamp",
+          "kind": "light",
+          "description": "indirect floor lamp"
+        },
+        {
+          "id": "blinds",
+          "kind": "blinds",
+          "description": "powered window blinds"
+        }
+      ]
+    },
+    {
+      "id": "bedroom",
+      "name": "Bedroom",
+      "accessories": [
+        {
+          "id": "ceiling",
+          "kind": "light",
+          "description": "main overhead ceiling light"
+        },
+        {
+          "id": "bedside",
+          "kind": "light",
+          "description": "indirect bedside lamps"
+        },
+        {
+          "id": "blinds",
+          "kind": "blinds",
+          "description": "powered window blinds"
+        }
+      ]
+    },
+    {
+      "id": "office",
+      "name": "Office",
+      "accessories": [
+        {
+          "id": "ceiling",
+          "kind": "light",
+          "description": "main overhead ceiling light"
+        },
+        {
+          "id": "desk",
+          "kind": "light",
+          "description": "indirect desk lamp"
+        },
+        {
+          "id": "blinds",
+          "kind": "blinds",
+          "description": "powered window blinds"
+        }
+      ]
+    }
+  ]
+}

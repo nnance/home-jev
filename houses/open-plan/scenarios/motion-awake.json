@@ -1,0 +1,21 @@
+{
+  "name": "Motion while awake",
+  "description": "Motion in a standalone room turns on only that room's main light, which times out when the room goes quiet.",
+  "start": { "time": "19:30", "levels": { "office.blinds": "open", "living.blinds": "open" } },
+  "steps": [
+    {
+      "event": { "type": "motion", "room": "office" },
+      "expect": {
+        "office.ceiling": "standard",
+        "office.desk": "off",
+        "office.blinds": "open",
+        "bedroom.ceiling": "off",
+        "living.ceiling": "off",
+        "kitchen.can": "off"
+      }
+    },
+    { "wait": 3, "event": { "type": "motion", "room": "office" }, "expect": { "office.ceiling": "standard" } },
+    { "wait": 4, "expect": { "office.ceiling": "standard" } },
+    { "wait": 2, "expect": { "office.ceiling": "off", "office.blinds": "open" } }
+  ]
+}

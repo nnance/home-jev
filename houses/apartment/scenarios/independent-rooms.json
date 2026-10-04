@@ -1,0 +1,45 @@
+{
+  "name": "Rooms are independent",
+  "description": "With no open spaces, motion and timeouts stay in their own room, and each room keeps its own timer.",
+  "start": {
+    "time": "18:00"
+  },
+  "steps": [
+    {
+      "event": {
+        "type": "motion",
+        "room": "kitchen"
+      },
+      "expect": {
+        "kitchen.ceiling": "standard",
+        "kitchen.counter": "off",
+        "living.ceiling": "off",
+        "bedroom.ceiling": "off"
+      }
+    },
+    {
+      "wait": 6,
+      "event": {
+        "type": "motion",
+        "room": "living"
+      },
+      "expect": {
+        "living.ceiling": "standard",
+        "kitchen.ceiling": "standard"
+      }
+    },
+    {
+      "wait": 5,
+      "expect": {
+        "kitchen.ceiling": "off",
+        "living.ceiling": "standard"
+      }
+    },
+    {
+      "wait": 5,
+      "expect": {
+        "living.ceiling": "off"
+      }
+    }
+  ]
+}

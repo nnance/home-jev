@@ -1,0 +1,12 @@
+{
+  "name": "Mixed sources on timeout",
+  "description": "Only the motion-triggered lights go off when the space goes quiet; the one switched on by hand stays.",
+  "start": { "time": "18:00", "levels": { "kitchen.pendant": "standard" } },
+  "steps": [
+    {
+      "event": { "type": "motion", "room": "kitchen" },
+      "expect": { "kitchen.can": "standard", "living.ceiling": "standard", "kitchen.pendant": "standard" }
+    },
+    { "wait": 6, "expect": { "kitchen.can": "off", "living.ceiling": "off", "kitchen.pendant": "standard" } }
+  ]
+}

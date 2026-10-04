@@ -1,3 +1,4 @@
+import { findZone, validateHouse, zoneOfRoom } from "./house.js";
 import { NO_CHANGE, restingLevel } from "./jev.js";
 import type {
   AccessoryKind,
@@ -35,7 +36,7 @@ export class Simulator {
   readonly mode: HouseMode;
   readonly accessories = new Map<string, AccessoryState>();
   private readonly kinds = new Map<string, AccessoryKind>();
-  /** Room id to the minute its motion timeout is due. */
+  /** Zone id (open space, or standalone room) to the minute its motion timeout is due. */
   private readonly motionTimers = new Map<string, number>();
 
   constructor(
@@ -43,6 +44,7 @@ export class Simulator {
     private readonly decide: Decide,
     start: Scenario["start"],
   ) {
+    validateHouse(house);
     this.minutes = parseTime(start.time);
     this.mode = { asleep: start.asleep ?? false, away: start.away ?? false };
 
@@ -77,7 +79,7 @@ export class Simulator {
       const due = [...this.motionTimers].filter(([, at]) => at <= target).sort((a, b) => a[1] - b[1])[0];
       if (!due) break;
       this.minutes = due[1];
-      results.push(await this.fire({ type: "motion_timeout", room: due[0] }));
+      results.push(await this.fire({ type: "motion_timeout", zone: due[0] }));
     }
     this.minutes = target;
     return results;
@@ -91,6 +93,8 @@ export class Simulator {
       uncertain: [],
       decisions: [],
       inputTokens: 0,
+      ms: 0,
+      retries: 0,
     };
 
     if ("room" in event && !this.house.rooms.some((room) => room.id === event.room)) {
@@ -111,24 +115,27 @@ export class Simulator {
         this.mode.away = false;
         break;
       case "motion":
-        this.motionTimers.set(event.room, this.minutes + this.house.motionTimeoutMinutes);
+        // Rooms in an open space share one timer, so motion anywhere in the space keeps it alive.
+        this.motionTimers.set(zoneOfRoom(this.house, event.room).id, this.minutes + this.house.motionTimeoutMinutes);
         break;
       case "motion_timeout": {
-        this.motionTimers.delete(event.room);
-        const litByMotion = [...this.accessories].some(
-          ([key, state]) => key.startsWith(`${event.room}.`) && state.turnedOnBy === "motion",
+        this.motionTimers.delete(event.zone);
+        const litByMotion = findZone(this.house, event.zone).rooms.some((room) =>
+          room.accessories.some((a) => this.accessories.get(`${room.id}.${a.id}`)?.turnedOnBy === "motion"),
         );
         if (!litByMotion) {
-          result.skipped = "nothing in the room was turned on by motion";
+          result.skipped = "nothing there was turned on by motion";
           return result;
         }
         break;
       }
     }
 
-    const { decisions, inputTokens } = await this.decide(this.snapshot(), event);
+    const { decisions, inputTokens, ms, retries } = await this.decide(this.snapshot(), event);
     result.decisions = decisions;
     result.inputTokens = inputTokens;
+    result.ms = ms;
+    result.retries = retries;
 
     // Decisions were all made against the same snapshot, so apply them together afterwards.
     for (const decision of decisions) {

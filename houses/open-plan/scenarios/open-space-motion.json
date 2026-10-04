@@ -1,0 +1,36 @@
+{
+  "name": "Open space motion",
+  "description": "Motion in one room of the open main floor lights the whole space, and motion anywhere in it keeps the lights on.",
+  "start": { "time": "19:30", "levels": { "kitchen.blinds": "open" } },
+  "steps": [
+    {
+      "event": { "type": "motion", "room": "kitchen" },
+      "expect": {
+        "kitchen.can": "standard",
+        "entry.ceiling": "standard",
+        "dining.chandelier": "standard",
+        "living.ceiling": "standard",
+        "kitchen.pendant": "off",
+        "living.lamp": "off",
+        "kitchen.blinds": "open",
+        "bedroom.ceiling": "off",
+        "office.ceiling": "off"
+      }
+    },
+    { "wait": 3, "event": { "type": "motion", "room": "living" }, "expect": { "kitchen.can": "standard" } },
+    {
+      "wait": 4,
+      "expect": { "kitchen.can": "standard", "living.ceiling": "standard" }
+    },
+    {
+      "wait": 2,
+      "expect": {
+        "kitchen.can": "off",
+        "entry.ceiling": "off",
+        "dining.chandelier": "off",
+        "living.ceiling": "off",
+        "kitchen.blinds": "open"
+      }
+    }
+  ]
+}

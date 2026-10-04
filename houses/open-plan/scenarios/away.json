@@ -17,6 +17,9 @@
       "event": { "type": "arrive" },
       "expect": { "entry.ceiling": "off", "kitchen.blinds": "open" }
     },
-    { "event": { "type": "motion", "room": "entry" }, "expect": { "entry.ceiling": "standard" } }
+    {
+      "event": { "type": "motion", "room": "entry" },
+      "expect": { "entry.ceiling": "standard", "kitchen.can": "standard", "bedroom.ceiling": "off" }
+    }
   ]
 }

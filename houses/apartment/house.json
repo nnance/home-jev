@@ -1,0 +1,61 @@
+{
+  "name": "Apartment",
+  "description": "A small home with walls between every room and no open spaces.",
+  "motionTimeoutMinutes": 10,
+  "rules": [
+    "An event in one room only changes accessories in that same room.",
+    "When motion is detected in a room and the house is awake, turn on the main overhead light in that room at standard.",
+    "When motion is detected in a room and the house is asleep, change nothing.",
+    "Motion never changes a light that is already on.",
+    "When the wall button is pressed in a room where all lights are off, turn on the main overhead light in that room at standard.",
+    "When the wall button is pressed in a room where at least one light is on, turn off every light in that room.",
+    "On a motion timeout, turn off the lights in that room that were turned on by motion. Lights that were turned on by the button stay as they are.",
+    "When the house goes to sleep, turn off every light in every room.",
+    "When the house wakes up, when everyone leaves, or when someone arrives home, change nothing."
+  ],
+  "rooms": [
+    {
+      "id": "kitchen",
+      "name": "Kitchen",
+      "accessories": [
+        {
+          "id": "ceiling",
+          "kind": "light",
+          "description": "main overhead ceiling light"
+        },
+        {
+          "id": "counter",
+          "kind": "light",
+          "description": "indirect counter lighting"
+        }
+      ]
+    },
+    {
+      "id": "living",
+      "name": "Living Room",
+      "accessories": [
+        {
+          "id": "ceiling",
+          "kind": "light",
+          "description": "main overhead ceiling light"
+        },
+        {
+          "id": "lamp",
+          "kind": "light",
+          "description": "indirect floor lamp"
+        }
+      ]
+    },
+    {
+      "id": "bedroom",
+      "name": "Bedroom",
+      "accessories": [
+        {
+          "id": "ceiling",
+          "kind": "light",
+          "description": "main overhead ceiling light"
+        }
+      ]
+    }
+  ]
+}

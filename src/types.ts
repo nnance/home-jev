@@ -12,11 +12,22 @@ export interface RoomConfig {
   accessories: AccessoryConfig[];
 }
 
+/** Rooms with no wall between them, which the rules can treat as one area. */
+export interface SpaceConfig {
+  id: string;
+  name: string;
+  /** Room ids. A room can belong to at most one space. */
+  rooms: string[];
+}
+
 export interface HouseConfig {
-  /** Minutes without motion before a room's motion timeout event fires. */
+  name?: string;
+  description?: string;
+  /** Minutes without motion before a room's or open space's motion timeout event fires. */
   motionTimeoutMinutes: number;
   rules: string[];
   rooms: RoomConfig[];
+  spaces?: SpaceConfig[];
 }
 
 /** What caused an accessory to leave its resting level. */
@@ -35,7 +46,8 @@ export interface HouseMode {
 export type SimEvent =
   | { type: "motion"; room: string }
   | { type: "button"; room: string }
-  | { type: "motion_timeout"; room: string }
+  /** `zone` is the id of an open space, or of a room that is not part of one. */
+  | { type: "motion_timeout"; zone: string }
   | { type: "sleep" | "wake" | "leave" | "arrive" };
 
 /** Everything Jev needs to know about the house at the moment of an event. */
@@ -60,6 +72,10 @@ export interface Decision {
 export interface DecideResult {
   decisions: Decision[];
   inputTokens: number;
+  /** Wall-clock time for the request, including any retries. */
+  ms: number;
+  /** Times the SDK retried after a rate limit, overload, or connection error. */
+  retries: number;
 }
 
 export type Decide = (snapshot: Snapshot, event: SimEvent) => Promise<DecideResult>;
@@ -81,6 +97,8 @@ export interface EventResult {
   /** Set when code handled the event without asking Jev. */
   skipped?: string;
   inputTokens: number;
+  ms: number;
+  retries: number;
 }
 
 /** A level name, "on" (anything but the resting level), or a list of acceptable levels. */

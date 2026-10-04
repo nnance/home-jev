@@ -1,0 +1,56 @@
+{
+  "name": "Asleep and bedtime",
+  "description": "Motion does nothing at night, the button still works, and bedtime turns everything off.",
+  "start": {
+    "time": "22:00",
+    "levels": {
+      "living.lamp": "soft"
+    }
+  },
+  "steps": [
+    {
+      "event": {
+        "type": "sleep"
+      },
+      "expect": {
+        "living.lamp": "off"
+      }
+    },
+    {
+      "wait": 120,
+      "event": {
+        "type": "motion",
+        "room": "kitchen"
+      },
+      "expect": {
+        "kitchen.ceiling": "off",
+        "kitchen.counter": "off"
+      }
+    },
+    {
+      "event": {
+        "type": "button",
+        "room": "kitchen"
+      },
+      "expect": {
+        "kitchen.ceiling": "standard",
+        "living.ceiling": "off"
+      }
+    },
+    {
+      "wait": 15,
+      "expect": {
+        "kitchen.ceiling": "standard"
+      }
+    },
+    {
+      "event": {
+        "type": "button",
+        "room": "kitchen"
+      },
+      "expect": {
+        "kitchen.ceiling": "off"
+      }
+    }
+  ]
+}

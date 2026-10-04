@@ -1,0 +1,53 @@
+{
+  "name": "Whole-space button while asleep",
+  "description": "At night the button brings the whole space up at soft, and motion still only uses indirect lights.",
+  "start": {
+    "time": "23:30",
+    "asleep": true
+  },
+  "steps": [
+    {
+      "event": {
+        "type": "button",
+        "room": "kitchen"
+      },
+      "expect": {
+        "kitchen.can": "soft",
+        "living.ceiling": "soft",
+        "entry.ceiling": "soft",
+        "dining.chandelier": "soft",
+        "bedroom.ceiling": "off",
+        "kitchen.undercounter": "off",
+        "living.lamp": "off",
+        "entry.baseboard": "off",
+        "kitchen.pendant": "off"
+      }
+    },
+    {
+      "wait": 1,
+      "event": {
+        "type": "button",
+        "room": "entry"
+      },
+      "expect": {
+        "kitchen.can": "off",
+        "living.ceiling": "off",
+        "entry.ceiling": "off",
+        "dining.chandelier": "off"
+      }
+    },
+    {
+      "wait": 1,
+      "event": {
+        "type": "motion",
+        "room": "living"
+      },
+      "expect": {
+        "living.lamp": "soft",
+        "kitchen.undercounter": "soft",
+        "living.ceiling": "off",
+        "kitchen.can": "off"
+      }
+    }
+  ]
+}
