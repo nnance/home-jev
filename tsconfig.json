@@ -1,11 +1,11 @@
 {
-  // The Node program: simulator core, CLI and API server.
+  // The Node program: the CLI, the API server and the adapters they plug into the simulator.
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./dist",
     "types": ["node"]
   },
-  "include": ["src/core", "src/cli", "src/server"],
-  "references": [{ "path": "./src/contract" }]
+  "include": ["src/cli", "src/adapters", "src/server"],
+  "references": [{ "path": "./src/core" }, { "path": "./src/contract" }]
 }

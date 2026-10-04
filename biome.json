@@ -1,4 +1,26 @@
 {
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
-  "css": { "parser": { "tailwindDirectives": true } }
+  "css": { "parser": { "tailwindDirectives": true } },
+  "overrides": [
+    {
+      "includes": ["src/core/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**", "!./**"],
+                    "message": "The simulator core is pure: it may only import its own files. Put anything that needs a package or I/O behind a port, in src/adapters."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

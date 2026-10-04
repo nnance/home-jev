@@ -1,25 +1,21 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Session, StepResponse } from "../contract/index.js";
-import { NO_CHANGE } from "../core/jev.js";
-import type { Decide } from "../core/types.js";
+import type { ConnectDecide } from "../adapters/jev.js";
+import { NO_CHANGE } from "../core/levels.js";
 import { createApp } from "./app.js";
 
 /** Stands in for Jev: motion turns the kitchen can lights on, a motion timeout turns them off. */
-const decide: Decide = async (snapshot, event) => {
+const connect: ConnectDecide = (onUsage) => async (snapshot, event) => {
   const choice = event.type === "motion" ? "standard" : event.type === "motion_timeout" ? "off" : NO_CHANGE;
-  return {
-    decisions: [...snapshot.accessories.keys()].map((key) => {
-      const picked = key === "kitchen.can" ? choice : NO_CHANGE;
-      return { key, choice: picked, probabilities: { [picked]: 0.9 }, confidence: 0.9 };
-    }),
-    inputTokens: 100,
-    ms: 5,
-    retries: 0,
-  };
+  onUsage({ inputTokens: 100, ms: 5, retries: 0 });
+  return [...snapshot.accessories.keys()].map((key) => {
+    const picked = key === "kitchen.can" ? choice : NO_CHANGE;
+    return { key, choice: picked, probabilities: { [picked]: 0.9 }, confidence: 0.9 };
+  });
 };
 
-const app = createApp({ decide, housesDir: "houses" });
+const app = createApp({ connect, housesDir: "houses" });
 
 async function post(path: string, body: unknown): Promise<Response> {
   return app.request(path, { method: "POST", body: JSON.stringify(body) });
@@ -51,6 +47,7 @@ test("an event changes the house and starts the zone's motion timer", async () =
   const { results, state } = (await response.json()) as StepResponse;
 
   assert.equal(results.length, 1);
+  assert.equal(results[0]?.inputTokens, 100);
   assert.deepEqual(results[0]?.changes, [{ key: "kitchen.can", from: "off", to: "standard", probability: 0.9 }]);
   assert.deepEqual(state.accessories["kitchen.can"], { level: "standard", turnedOnBy: "motion" });
   assert.deepEqual(state.timeouts, [{ zone: "main", dueTime: "20:05", minutesLeft: 5 }]);
@@ -88,7 +85,7 @@ test("bad requests are rejected without touching the simulator", async () => {
 
 test("a failing Jev request is reported as a bad gateway", async () => {
   const failing = createApp({
-    decide: async () => {
+    connect: () => async () => {
       throw new Error("503 overloaded");
     },
     housesDir: "houses",

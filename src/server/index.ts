@@ -1,6 +1,6 @@
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
-import { createDecide } from "../core/jev.js";
+import { createDecide } from "../adapters/jev.js";
 import { createApp } from "./app.js";
 
 // Like the CLI, the server is run from the project root and reads these relative to it.
@@ -12,7 +12,7 @@ const TAILWIND = "node_modules/@tailwindcss/browser/dist/index.global.js";
 
 const port = Number(process.env.PORT ?? 3000);
 
-const app = createApp({ decide: createDecide(), housesDir: HOUSES_DIR });
+const app = createApp({ connect: createDecide, housesDir: HOUSES_DIR });
 
 // The page, its compiled modules, and the two browser libraries it loads. Nothing else is served.
 const under = (prefix: string) => (path: string) => path.slice(prefix.length);

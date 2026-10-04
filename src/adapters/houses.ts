@@ -13,8 +13,13 @@ export async function listHouseIds(housesDir: string): Promise<string[]> {
     .sort();
 }
 
-/** Returns null for an id that is not a house, so a request can never name a path outside the directory. */
+/** Reads the house defined in a house folder. */
+export async function readHouse(houseDir: string): Promise<HouseConfig> {
+  return JSON.parse(await readFile(join(houseDir, HOUSE_FILE), "utf8")) as HouseConfig;
+}
+
+/** Returns null for an id that is not a house, so an id can never name a path outside the directory. */
 export async function loadHouse(housesDir: string, id: string): Promise<HouseConfig | null> {
   if (!(await listHouseIds(housesDir)).includes(id)) return null;
-  return JSON.parse(await readFile(join(housesDir, id, HOUSE_FILE), "utf8")) as HouseConfig;
+  return readHouse(join(housesDir, id));
 }

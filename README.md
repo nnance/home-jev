@@ -203,15 +203,20 @@ Accessories are addressed as `room.accessory`. An expectation is a level name, `
 houses/<name>/
   house.json          rooms, open spaces, accessories, rules, motion timeout
   scenarios/          one JSON file per scenario for that house
-src/core/             the simulator, used unchanged by the CLI and the API server
-  simulator.ts        clock, motion timers, house state, applying Jev's decisions
-  jev.ts              builds the state and questions sent to Jev
+src/core/             the simulator: pure, no I/O and no packages
+  simulator.ts        clock, motion timers, house state, applying decisions
+  types.ts            shared types, including the Decide port
   house.ts            open space lookups and house validation
-  types.ts            shared types
+  levels.ts, time.ts  accessory levels and clock formatting
+src/adapters/         what plugs into the simulator from outside
+  jev.ts              the Decide port implemented with Jev: builds the request, reports its cost
+  houses.ts           reads house definitions from disk
 src/cli/index.ts      CLI: loads scenarios, prints the timeline, checks expectations
 src/server/           HTTP API over the simulator, and the static files of the page
 src/contract/         the API's request and response types, shared by server and page
 src/web/              the page; talks to the API and cannot import the simulator
 ```
 
-The layers only depend downwards: the core knows nothing about the CLI or the server, and the page is a separate TypeScript project whose only link to the rest is the types in `src/contract/`. Importing the simulator from `src/web/` is a compile error.
+The simulator follows ports and adapters. It asks "what should each accessory be set to?" through one port, `Decide`, which it is handed when constructed; `src/adapters/jev.ts` answers it with Jev, and the API tests answer it with a stand-in. The core is its own TypeScript project with no Node types, and a lint rule limits it to importing its own files, so it cannot reach the SDK, the file system or the network.
+
+The CLI and the API server both drive the same simulator. The page is a separate TypeScript project whose only link to the rest is the types in `src/contract/`; importing the simulator from `src/web/` is a compile error.

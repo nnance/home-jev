@@ -1,12 +1,14 @@
 import { readdir, readFile } from "node:fs/promises";
 import { dirname, join, normalize } from "node:path";
+import { listHouseIds, readHouse } from "../adapters/houses.js";
+import { createDecide, type JevUsage } from "../adapters/jev.js";
 import { findZone } from "../core/house.js";
-import { createDecide, formatTime, NO_CHANGE, restingLevel } from "../core/jev.js";
+import { NO_CHANGE, restingLevel } from "../core/levels.js";
 import { Simulator } from "../core/simulator.js";
+import { formatTime } from "../core/time.js";
 import type { Decide, EventResult, Expectation, HouseConfig, Scenario, SimEvent } from "../core/types.js";
 
 const HOUSES_DIR = "houses";
-const HOUSE_FILE = "house.json";
 const SCENARIO_DIR = "scenarios";
 
 async function readJson<T>(path: string): Promise<T> {
@@ -70,12 +72,6 @@ function meets(expectation: Expectation, level: string, resting: string): boolea
 interface Totals {
   passed: number;
   failed: number;
-  requests: number;
-  inputTokens: number;
-  retries: number;
-  /** Time spent waiting on Jev. */
-  ms: number;
-  slowestMs: number;
 }
 
 interface Options {
@@ -105,14 +101,7 @@ async function runScenario(
     }
     if (step.event) results.push(await simulator.fire(step.event));
 
-    for (const result of results) {
-      if (!options.quiet) printResult(house, result, options.verbose);
-      if (!result.skipped) totals.requests += 1;
-      totals.inputTokens += result.inputTokens;
-      totals.retries += result.retries;
-      totals.ms += result.ms;
-      totals.slowestMs = Math.max(totals.slowestMs, result.ms);
-    }
+    if (!options.quiet) for (const result of results) printResult(house, result, options.verbose);
 
     for (const [key, expectation] of Object.entries(step.expect ?? {})) {
       const level = simulator.accessories.get(key)?.level ?? "";
@@ -140,21 +129,30 @@ async function select(target: string): Promise<Map<string, string[]>> {
   return new Map([[target, names.map((name) => join(scenarioDir, name))]]);
 }
 
-function summarise(totals: Totals, scenarios: number, houses: number): string {
-  const retries = totals.retries === 1 ? "1 retry" : `${totals.retries} retries`;
+function summarise(totals: Totals, requests: JevUsage[], scenarios: number, houses: number): string {
+  const sum = (pick: (usage: JevUsage) => number) => requests.reduce((total, usage) => total + pick(usage), 0);
+  const retryCount = sum((usage) => usage.retries);
+  const retries = retryCount === 1 ? "1 retry" : `${retryCount} retries`;
+  const slowestMs = Math.max(0, ...requests.map((usage) => usage.ms));
   return (
     `${totals.passed} expectations passed, ${totals.failed} failed across ${scenarios} scenarios in ${houses} houses\n` +
-    `${totals.requests} Jev requests, ${totals.inputTokens} input tokens, ${retries}, ` +
-    `${(totals.ms / 1000).toFixed(1)}s waiting on Jev (slowest request ${totals.slowestMs}ms)`
+    `${requests.length} Jev requests, ${sum((usage) => usage.inputTokens)} input tokens, ${retries}, ` +
+    `${(sum((usage) => usage.ms) / 1000).toFixed(1)}s waiting on Jev (slowest request ${slowestMs}ms)`
   );
 }
 
-/** Run every selected scenario once, one request at a time. */
-async function runAll(selected: Map<string, string[]>, decide: Decide, options: Options): Promise<Totals> {
-  const totals: Totals = { passed: 0, failed: 0, requests: 0, inputTokens: 0, retries: 0, ms: 0, slowestMs: 0 };
+/** Run every selected scenario once, one request at a time. `requests` fills up as Jev is called. */
+async function runAll(
+  selected: Map<string, string[]>,
+  decide: Decide,
+  requests: JevUsage[],
+  options: Options,
+): Promise<Totals> {
+  const totals: Totals = { passed: 0, failed: 0 };
+  requests.length = 0;
   let scenarios = 0;
   for (const [houseDir, files] of selected) {
-    const house = await readJson<HouseConfig>(join(houseDir, HOUSE_FILE));
+    const house = await readHouse(houseDir);
     const name = house.name ?? houseDir;
     if (!options.quiet) {
       console.log(`\n=== ${name}  (${houseDir}) ===`);
@@ -170,7 +168,7 @@ async function runAll(selected: Map<string, string[]>, decide: Decide, options: 
     console.log(`${gap}${name}: ${totals.passed - before.passed} passed, ${totals.failed - before.failed} failed`);
   }
 
-  console.log(`\n${summarise(totals, scenarios, selected.size)}`);
+  console.log(`\n${summarise(totals, requests, scenarios, selected.size)}`);
   return totals;
 }
 
@@ -189,11 +187,7 @@ async function main(): Promise<void> {
   const options: Options = { verbose: args.includes("--verbose"), quiet: args.includes("--quiet") };
   let targets = args.filter((arg) => !arg.startsWith("--")).map((arg) => normalize(arg));
   if (targets.length === 0) {
-    const entries = await readdir(HOUSES_DIR, { withFileTypes: true });
-    targets = entries
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => join(HOUSES_DIR, entry.name))
-      .sort();
+    targets = (await listHouseIds(HOUSES_DIR)).map((id) => join(HOUSES_DIR, id));
   }
 
   const selected = new Map<string, string[]>();
@@ -205,11 +199,12 @@ async function main(): Promise<void> {
 
   // Jev's answers can vary slightly between identical requests, so repeating the
   // whole suite is how borderline decisions show up as intermittent failures.
-  const decide = createDecide();
+  const requests: JevUsage[] = [];
+  const decide = createDecide((usage) => requests.push(usage));
   const failedRuns: number[] = [];
   for (let run = 1; run <= runs; run++) {
     if (runs > 1) console.log(`\n##### Run ${run} of ${runs} #####`);
-    const totals = await runAll(selected, decide, options);
+    const totals = await runAll(selected, decide, requests, options);
     if (totals.failed > 0) failedRuns.push(run);
   }
 

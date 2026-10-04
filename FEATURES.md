@@ -119,6 +119,7 @@ What the simulator does, and the guarantees it keeps. For setup and file formats
 
 **Invariants**
 
+- The simulator itself does no I/O and imports no packages. It reaches Jev only through the decision port it is given, and is handed a copy of the house, so nothing behind the port can change the house except through its decisions.
 - The API runs the same simulator as the CLI. Firing an event and advancing the clock are the same two operations a scenario step performs.
 - The page depends only on the API. It cannot import the simulator, and the simulator knows nothing about the API or the page.
 - Requests to Jev are still sent one at a time, across all sessions. The page disables its event controls while one is in flight.

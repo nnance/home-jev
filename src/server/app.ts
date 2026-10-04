@@ -11,19 +11,24 @@ import type {
   StepResponse,
   TriggerEvent,
 } from "../contract/index.js";
-import { formatTime, LEVELS } from "../core/jev.js";
+import { listHouseIds, loadHouse } from "../adapters/houses.js";
+import type { ConnectDecide, JevUsage } from "../adapters/jev.js";
+import { LEVELS } from "../core/levels.js";
 import { Simulator } from "../core/simulator.js";
-import type { Decide, EventResult as SimResult, HouseConfig } from "../core/types.js";
-import { listHouseIds, loadHouse } from "./houses.js";
+import { formatTime } from "../core/time.js";
+import type { EventResult as SimResult, HouseConfig } from "../core/types.js";
 
 /** Sessions live in memory; the oldest is dropped once this many exist. */
 const MAX_SESSIONS = 50;
 const MAX_ADVANCE_MINUTES = 24 * 60;
 
 export interface AppOptions {
-  decide: Decide;
+  /** Supplies the simulator's Decide port. createDecide in production, a stand-in in tests. */
+  connect: ConnectDecide;
   housesDir: string;
 }
+
+const NO_USAGE: JevUsage = { inputTokens: 0, ms: 0, retries: 0 };
 
 interface StoredSession {
   house: House;
@@ -64,8 +69,8 @@ function toState(simulator: Simulator): HouseState {
   };
 }
 
-function toResult({ minutes, event, ...rest }: SimResult): EventResult {
-  return { time: formatTime(minutes), event, ...rest };
+function toResult({ minutes, event, ...rest }: SimResult, usage: JevUsage): EventResult {
+  return { time: formatTime(minutes), event, ...rest, ...usage };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -106,9 +111,13 @@ function parseEvent(value: unknown, house: House): TriggerEvent {
 }
 
 /** The simulator as an HTTP API. Each session is one Simulator, driven by the same calls a scenario makes. */
-export function createApp({ decide, housesDir }: AppOptions): Hono {
+export function createApp({ connect, housesDir }: AppOptions): Hono {
   const app = new Hono();
   const sessions = new Map<string, StoredSession>();
+
+  /** What the requests of the step in progress cost, in the order they were made. */
+  let requests: JevUsage[] = [];
+  const decide = connect((usage) => requests.push(usage));
 
   // The simulator never calls Jev concurrently, so every step waits for the one before it.
   let queue: Promise<unknown> = Promise.resolve();
@@ -140,8 +149,16 @@ export function createApp({ decide, housesDir }: AppOptions): Hono {
 
   async function step(session: StoredSession, run: () => Promise<SimResult[]>): Promise<StepResponse> {
     try {
-      const results = await inTurn(run);
-      return { results: results.map(toResult), state: toState(session.simulator) };
+      return await inTurn(async () => {
+        requests = [];
+        const results = await run();
+        // Steps run one at a time and each event that was not skipped made exactly one request, in order.
+        const costs = [...requests];
+        return {
+          results: results.map((result) => toResult(result, (result.skipped ? undefined : costs.shift()) ?? NO_USAGE)),
+          state: toState(session.simulator),
+        };
+      });
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       throw new HttpError(502, `Jev did not answer: ${reason}`);
