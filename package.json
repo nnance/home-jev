@@ -11,20 +11,26 @@
   "license": "ISC",
   "author": "Nick Nance",
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/cli/index.js",
   "scripts": {
-    "build": "tsc",
-    "start": "node --env-file=.env dist/index.js",
+    "build": "tsc -b . src/web",
+    "start": "node --env-file=.env dist/cli/index.js",
+    "web": "npm run build && node --env-file=.env dist/server/index.js",
     "lint": "biome lint .",
     "format": "biome format --write .",
-    "test": "tsc && node --env-file=.env dist/index.js --runs 3 --quiet"
+    "test": "npm run build && node --env-file=.env dist/cli/index.js --runs 3 --quiet",
+    "test:api": "npm run build && node --test \"dist/server/*.test.js\""
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
+    "@tailwindcss/browser": "^4.3.3",
     "@types/node": "^26.6.3",
     "typescript": "^7.0.2"
   },
   "dependencies": {
-    "@typesafe-ai/sdk": "^0.6.0"
+    "@hono/node-server": "^2.1.3",
+    "@typesafe-ai/sdk": "^0.6.0",
+    "hono": "^4.13.12",
+    "preact": "^11.0.0"
   }
 }

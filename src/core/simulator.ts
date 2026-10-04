@@ -67,6 +67,11 @@ export class Simulator {
     return kind;
   }
 
+  /** Zone id (open space, or standalone room) to the minute its motion timeout is due. */
+  get pendingTimeouts(): ReadonlyMap<string, number> {
+    return this.motionTimers;
+  }
+
   private snapshot(): Snapshot {
     return { house: this.house, mode: this.mode, minutes: this.minutes, accessories: this.accessories };
   }

@@ -1,9 +1,9 @@
 import { readdir, readFile } from "node:fs/promises";
 import { dirname, join, normalize } from "node:path";
-import { findZone } from "./house.js";
-import { createDecide, formatTime, NO_CHANGE, restingLevel } from "./jev.js";
-import { Simulator } from "./simulator.js";
-import type { Decide, EventResult, Expectation, HouseConfig, Scenario, SimEvent } from "./types.js";
+import { findZone } from "../core/house.js";
+import { createDecide, formatTime, NO_CHANGE, restingLevel } from "../core/jev.js";
+import { Simulator } from "../core/simulator.js";
+import type { Decide, EventResult, Expectation, HouseConfig, Scenario, SimEvent } from "../core/types.js";
 
 const HOUSES_DIR = "houses";
 const HOUSE_FILE = "house.json";

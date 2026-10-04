@@ -6,6 +6,8 @@ You describe a house, a list of rules such as "when motion is detected while the
 
 See [FEATURES.md](FEATURES.md) for what the simulator does and the guarantees it keeps.
 
+Besides replaying scenarios from the command line, you can drive a house by hand from a web page: see [Interactive simulator](#interactive-simulator).
+
 ## How it works
 
 When an event fires (motion, a wall button press, the house going to sleep, and so on), the simulator sends Jev a single request containing:
@@ -70,6 +72,32 @@ Open plan: 89 passed, 0 failed
 ```
 
 The process exits non-zero if any expectation fails.
+
+## Interactive simulator
+
+```sh
+npm run web        # build, then serve the page and its API at http://localhost:3000
+```
+
+Pick a house and a start time and mode, then trigger motion or a wall button in any room, fire a house event, or advance the clock. The page shows every accessory's level and what turned it on, the pending motion timeouts, and a timeline of each event with Jev's probabilities, like the CLI's `--verbose` output.
+
+The clock is simulated here too: it only moves when you advance it, and motion timeouts that come due fire on the way. Set `PORT` to use a different port. The server listens on this machine only, and the API key stays on the server.
+
+The page reaches the simulator only through an HTTP API, which you can also call directly:
+
+| Request | What it does |
+| --- | --- |
+| `GET /api/houses` | Lists the houses under `houses/` |
+| `GET /api/houses/:id` | One house: rooms, open spaces, rules, timeout, and the levels of each accessory kind |
+| `POST /api/sessions` | Starts a house: `{ "house": "open-plan", "start": { "time": "20:00", "asleep": false, "away": false } }` |
+| `GET /api/sessions/:id` | The clock, mode, every accessory's level and source, and pending motion timeouts |
+| `POST /api/sessions/:id/events` | Fires an event: `{ "type": "motion", "room": "kitchen" }` |
+| `POST /api/sessions/:id/advance` | Advances the clock: `{ "minutes": 5 }` |
+| `DELETE /api/sessions/:id` | Ends a session |
+
+Firing an event and advancing the clock both return the results of every event that fired, plus the new state. Sessions live in the server's memory and are lost when it stops.
+
+`npm run test:api` checks the API against a stand-in for Jev, so it needs no API key and makes no requests.
 
 ## Houses
 
@@ -166,17 +194,24 @@ Accessories are addressed as `room.accessory`. An expectation is a level name, `
 - **TypeScript** on **Node.js** (ES modules), compiled with `tsc`
 - **[@typesafe-ai/sdk](https://docs.typesafe.ai/sdk/javascript)** for calls to Jev (`jev-latest`)
 - **Biome** for linting and formatting (`npm run lint`, `npm run format`)
-- JSON files for the house definitions and scenarios; no database or server
+- JSON files for the house definitions and scenarios; no database
+- For the interactive simulator only: **Hono** for the API, **Preact** for the page, and **Tailwind CSS** compiled in the browser. `tsc` builds the page as well, so there is no bundler and no CSS build step.
 
 ## Project layout
 
 ```
 houses/<name>/
-  house.json        rooms, open spaces, accessories, rules, motion timeout
-  scenarios/        one JSON file per scenario for that house
-src/index.ts        CLI: loads scenarios, prints the timeline, checks expectations
-src/simulator.ts    clock, motion timers, house state, applying Jev's decisions
-src/jev.ts          builds the state and questions sent to Jev
-src/house.ts        open space lookups and house validation
-src/types.ts        shared types
+  house.json          rooms, open spaces, accessories, rules, motion timeout
+  scenarios/          one JSON file per scenario for that house
+src/core/             the simulator, used unchanged by the CLI and the API server
+  simulator.ts        clock, motion timers, house state, applying Jev's decisions
+  jev.ts              builds the state and questions sent to Jev
+  house.ts            open space lookups and house validation
+  types.ts            shared types
+src/cli/index.ts      CLI: loads scenarios, prints the timeline, checks expectations
+src/server/           HTTP API over the simulator, and the static files of the page
+src/contract/         the API's request and response types, shared by server and page
+src/web/              the page; talks to the API and cannot import the simulator
 ```
+
+The layers only depend downwards: the core knows nothing about the CLI or the server, and the page is a separate TypeScript project whose only link to the rest is the types in `src/contract/`. Importing the simulator from `src/web/` is a compile error.
