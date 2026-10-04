@@ -111,3 +111,19 @@ What the simulator does, and the guarantees it keeps. For setup and file formats
 - Requests are sent one at a time; the simulator never calls Jev concurrently.
 - A retry after a rate limit or overload is always reported, never silent.
 - A repeated run fails overall if any single run has a failed expectation.
+
+## Interactive simulator
+
+- A web page drives a house by hand: trigger motion or a wall button in a room, fire a house event, or advance the clock, and see every accessory's level, what turned it on, the pending motion timeouts, and a timeline of each event with Jev's probabilities.
+- The page works through an HTTP API that exposes the houses, and a session per running house with endpoints to fire an event and to advance the clock.
+
+**Invariants**
+
+- The simulator itself does no I/O and imports no packages. It reaches Jev only through the decision port it is given, and is handed a copy of the house, so nothing behind the port can change the house except through its decisions.
+- The API runs the same simulator as the CLI. Firing an event and advancing the clock are the same two operations a scenario step performs.
+- The page depends only on the API. It cannot import the simulator, and the simulator knows nothing about the API or the page.
+- Requests to Jev are still sent one at a time, across all sessions. The page disables its event controls while one is in flight.
+- The clock is still simulated: it starts where the session says and only moves when a request advances it.
+- A client can fire the room and house events. Motion timeouts are only ever raised by the simulator.
+- A request naming an unknown house, room or session, or a malformed time or duration, is rejected and changes nothing.
+- The API key never leaves the server, and the server listens on the local machine only.

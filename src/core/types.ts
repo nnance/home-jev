@@ -50,35 +50,31 @@ export type SimEvent =
   | { type: "motion_timeout"; zone: string }
   | { type: "sleep" | "wake" | "leave" | "arrive" };
 
-/** Everything Jev needs to know about the house at the moment of an event. */
+/** Everything a decision needs to know about the house at the moment of an event. A copy, not the live house. */
 export interface Snapshot {
   house: HouseConfig;
-  mode: HouseMode;
+  mode: Readonly<HouseMode>;
   /** Minutes since midnight. */
   minutes: number;
   /** Keyed by "room.accessory". */
-  accessories: ReadonlyMap<string, AccessoryState>;
+  accessories: ReadonlyMap<string, Readonly<AccessoryState>>;
 }
 
 export interface Decision {
   /** "room.accessory" */
   key: string;
-  /** The option Jev picked: a level name or "no_change". */
+  /** The option picked: a level name or "no_change". */
   choice: string;
   probabilities: Record<string, number>;
   confidence: number;
 }
 
-export interface DecideResult {
-  decisions: Decision[];
-  inputTokens: number;
-  /** Wall-clock time for the request, including any retries. */
-  ms: number;
-  /** Times the SDK retried after a rate limit, overload, or connection error. */
-  retries: number;
-}
-
-export type Decide = (snapshot: Snapshot, event: SimEvent) => Promise<DecideResult>;
+/**
+ * The simulator's one port: given the house and an event, what should each
+ * accessory be set to? The simulator is handed an implementation and never
+ * knows what is behind it.
+ */
+export type Decide = (snapshot: Snapshot, event: SimEvent) => Promise<Decision[]>;
 
 export interface Change {
   key: string;
@@ -91,14 +87,11 @@ export interface EventResult {
   minutes: number;
   event: SimEvent;
   changes: Change[];
-  /** Changes Jev leaned towards but not strongly enough to act on. */
+  /** Changes the decision leaned towards but not strongly enough to act on. */
   uncertain: Change[];
   decisions: Decision[];
-  /** Set when code handled the event without asking Jev. */
+  /** Set when code handled the event without asking for a decision. */
   skipped?: string;
-  inputTokens: number;
-  ms: number;
-  retries: number;
 }
 
 /** A level name, "on" (anything but the resting level), or a list of acceptable levels. */

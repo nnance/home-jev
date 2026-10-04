@@ -1,0 +1,11 @@
+{
+  // The API's wire types: the only code the server and the browser app share.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": ".",
+    "outDir": "../../dist/contract",
+    "types": []
+  },
+  "include": ["."]
+}

@@ -1,5 +1,6 @@
 import { findZone, validateHouse, zoneOfRoom } from "./house.js";
-import { NO_CHANGE, restingLevel } from "./jev.js";
+import { NO_CHANGE, restingLevel } from "./levels.js";
+import { parseTime } from "./time.js";
 import type {
   AccessoryKind,
   AccessoryState,
@@ -14,16 +15,8 @@ import type {
   Source,
 } from "./types.js";
 
-/** Jev must give its pick at least this probability before the simulator acts on it. */
+/** A decision must give its pick at least this probability before the simulator acts on it. */
 const ACT_THRESHOLD = 0.6;
-
-function parseTime(time: string): number {
-  const [hours, minutes] = time.split(":").map(Number);
-  if (hours === undefined || minutes === undefined || Number.isNaN(hours) || Number.isNaN(minutes)) {
-    throw new Error(`Invalid time "${time}", expected HH:MM`);
-  }
-  return hours * 60 + minutes;
-}
 
 function sourceOf(event: SimEvent): Source {
   if (event.type === "motion") return "motion";
@@ -67,8 +60,15 @@ export class Simulator {
     return kind;
   }
 
+  /** Zone id (open space, or standalone room) to the minute its motion timeout is due. */
+  get pendingTimeouts(): ReadonlyMap<string, number> {
+    return this.motionTimers;
+  }
+
   private snapshot(): Snapshot {
-    return { house: this.house, mode: this.mode, minutes: this.minutes, accessories: this.accessories };
+    // Copies, so whatever is behind the port cannot change the house except through its decisions.
+    const accessories = new Map([...this.accessories].map(([key, state]) => [key, { ...state }]));
+    return { house: this.house, mode: { ...this.mode }, minutes: this.minutes, accessories };
   }
 
   /** Advance the clock, firing any motion timeouts that come due on the way. */
@@ -86,16 +86,7 @@ export class Simulator {
   }
 
   async fire(event: SimEvent): Promise<EventResult> {
-    const result: EventResult = {
-      minutes: this.minutes,
-      event,
-      changes: [],
-      uncertain: [],
-      decisions: [],
-      inputTokens: 0,
-      ms: 0,
-      retries: 0,
-    };
+    const result: EventResult = { minutes: this.minutes, event, changes: [], uncertain: [], decisions: [] };
 
     if ("room" in event && !this.house.rooms.some((room) => room.id === event.room)) {
       throw new Error(`Unknown room "${event.room}"`);
@@ -131,11 +122,8 @@ export class Simulator {
       }
     }
 
-    const { decisions, inputTokens, ms, retries } = await this.decide(this.snapshot(), event);
+    const decisions = await this.decide(this.snapshot(), event);
     result.decisions = decisions;
-    result.inputTokens = inputTokens;
-    result.ms = ms;
-    result.retries = retries;
 
     // Decisions were all made against the same snapshot, so apply them together afterwards.
     for (const decision of decisions) {

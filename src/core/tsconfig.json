@@ -1,0 +1,13 @@
+{
+  // The simulator. No Node types and no way out of this folder: it does no I/O,
+  // and reaches Jev only through the Decide port it is given.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": ".",
+    "outDir": "../../dist/core",
+    "lib": ["esnext"],
+    "types": []
+  },
+  "include": ["."]
+}

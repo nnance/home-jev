@@ -1,31 +1,20 @@
 import { type ChoiceCriteria, type ChoiceQuestion, choice, TypeSafeClient } from "@typesafe-ai/sdk";
-import { findZone, spaceOf } from "./house.js";
-import type { AccessoryKind, Decide, Decision, HouseConfig, RoomConfig, SimEvent, Snapshot } from "./types.js";
+import { findZone, spaceOf } from "../core/house.js";
+import { LEVELS, NO_CHANGE } from "../core/levels.js";
+import { formatTime } from "../core/time.js";
+import type { Decide, HouseConfig, RoomConfig, SimEvent, Snapshot } from "../core/types.js";
 
-export const NO_CHANGE = "no_change";
-
-/** The levels each kind of accessory can be set to. The first is its resting level. */
-export const LEVELS: Record<AccessoryKind, Record<string, string>> = {
-  light: {
-    off: "The light is off",
-    soft: "Dim, gentle lighting (30%)",
-    standard: "Normal everyday lighting (60%)",
-    full: "Maximum brightness (100%)",
-  },
-  blinds: {
-    closed: "The blinds are closed",
-    open: "The blinds are open",
-  },
-};
-
-export function restingLevel(kind: AccessoryKind): string {
-  return Object.keys(LEVELS[kind])[0] as string;
+/** What one request to Jev cost. */
+export interface JevUsage {
+  inputTokens: number;
+  /** Wall-clock time for the request, including any retries. */
+  ms: number;
+  /** Times the SDK retried after a rate limit, overload, or connection error. */
+  retries: number;
 }
 
-export function formatTime(minutes: number): string {
-  const m = ((minutes % 1440) + 1440) % 1440;
-  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
-}
+/** Given a listener for each request's cost, returns a Decide. The shape of createDecide, so tests can stand in for it. */
+export type ConnectDecide = (onUsage: (usage: JevUsage) => void) => Decide;
 
 // Jev reads times as text, so code names the part of the day for it.
 function timeOfDay(minutes: number): string {
@@ -180,7 +169,8 @@ export function buildRequest(snapshot: Snapshot, event: SimEvent) {
   return { state, questions };
 }
 
-export function createDecide(): Decide {
+/** The Jev adapter for the simulator's Decide port. Reports what each request cost to `onUsage`. */
+export const createDecide: ConnectDecide = (onUsage) => {
   // The SDK retries rate limits and overloads on its own and only mentions it at
   // info level, so listen there to count retries instead of letting them pass silently.
   let retries = 0;
@@ -203,12 +193,12 @@ export function createDecide(): Decide {
     const started = performance.now();
     const response = await client.systemOne(buildRequest(snapshot, event));
     const ms = Math.round(performance.now() - started);
-    const decisions: Decision[] = Object.entries(response.answers).map(([key, answer]) => ({
+    onUsage({ inputTokens: response.usage.input_tokens, ms, retries: retries - retriesBefore });
+    return Object.entries(response.answers).map(([key, answer]) => ({
       key,
       choice: answer.choice,
       probabilities: { ...answer.probabilities },
       confidence: answer.confidence,
     }));
-    return { decisions, inputTokens: response.usage.input_tokens, ms, retries: retries - retriesBefore };
   };
-}
+};

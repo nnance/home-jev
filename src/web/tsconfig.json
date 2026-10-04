@@ -1,0 +1,15 @@
+{
+  // The browser app. rootDir keeps it from importing the simulator: it may only
+  // reach outside this folder through the referenced API contract.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "../../dist/web",
+    "lib": ["esnext", "dom", "dom.iterable"],
+    "types": [],
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact"
+  },
+  "include": ["."],
+  "references": [{ "path": "../contract" }]
+}
