@@ -17,11 +17,14 @@
     "start": "node --env-file=.env dist/index.js",
     "lint": "biome lint .",
     "format": "biome format --write .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "tsc && node --env-file=.env dist/index.js --runs 3 --quiet"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
     "@types/node": "^26.6.3",
     "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@typesafe-ai/sdk": "^0.6.0"
   }
 }

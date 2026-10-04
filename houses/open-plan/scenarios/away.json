@@ -1,0 +1,25 @@
+{
+  "name": "Away",
+  "description": "Leaving turns the lights off, and motion in an empty house is ignored.",
+  "start": { "time": "08:30", "levels": { "kitchen.can": "standard", "entry.ceiling": "standard", "kitchen.blinds": "open" } },
+  "steps": [
+    {
+      "event": { "type": "leave" },
+      "expect": { "kitchen.can": "off", "entry.ceiling": "off", "kitchen.blinds": "open" }
+    },
+    {
+      "wait": 120,
+      "event": { "type": "motion", "room": "living" },
+      "expect": { "living.ceiling": "off", "living.lamp": "off" }
+    },
+    {
+      "wait": 400,
+      "event": { "type": "arrive" },
+      "expect": { "entry.ceiling": "off", "kitchen.blinds": "open" }
+    },
+    {
+      "event": { "type": "motion", "room": "entry" },
+      "expect": { "entry.ceiling": "standard", "kitchen.can": "standard", "bedroom.ceiling": "off" }
+    }
+  ]
+}

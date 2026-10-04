@@ -1,0 +1,33 @@
+{
+  "name": "Motion while asleep",
+  "description": "A late-night walk through the open main floor gets soft indirect light across the space, then it turns itself off.",
+  "start": { "time": "02:15", "asleep": true },
+  "steps": [
+    {
+      "event": { "type": "motion", "room": "entry" },
+      "expect": {
+        "entry.baseboard": "soft",
+        "kitchen.undercounter": "soft",
+        "living.lamp": "soft",
+        "entry.ceiling": "off",
+        "kitchen.can": "off",
+        "kitchen.pendant": "off",
+        "dining.chandelier": "off",
+        "living.ceiling": "off",
+        "kitchen.blinds": "closed",
+        "bedroom.bedside": "off",
+        "bedroom.ceiling": "off"
+      }
+    },
+    {
+      "wait": 1,
+      "event": { "type": "motion", "room": "kitchen" },
+      "expect": { "kitchen.undercounter": "soft", "kitchen.can": "off" }
+    },
+    { "wait": 4, "expect": { "entry.baseboard": "soft", "kitchen.undercounter": "soft" } },
+    {
+      "wait": 1,
+      "expect": { "entry.baseboard": "off", "kitchen.undercounter": "off", "living.lamp": "off" }
+    }
+  ]
+}

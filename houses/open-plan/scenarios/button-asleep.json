@@ -1,0 +1,13 @@
+{
+  "name": "Wall button while asleep",
+  "description": "Pressing the button at night gives soft light; pressing it again turns everything in the room off.",
+  "start": { "time": "23:45", "asleep": true },
+  "steps": [
+    { "event": { "type": "button", "room": "bedroom" }, "expect": { "bedroom.ceiling": "soft" } },
+    {
+      "wait": 2,
+      "event": { "type": "button", "room": "bedroom" },
+      "expect": { "bedroom.ceiling": "off", "bedroom.bedside": "off" }
+    }
+  ]
+}

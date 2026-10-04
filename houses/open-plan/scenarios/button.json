@@ -1,0 +1,30 @@
+{
+  "name": "Wall button",
+  "description": "The button only affects its own room, even in an open space, and lights it turned on survive the motion timeout.",
+  "start": { "time": "20:00" },
+  "steps": [
+    {
+      "event": { "type": "button", "room": "living" },
+      "expect": {
+        "living.ceiling": "standard",
+        "living.blinds": "closed",
+        "kitchen.can": "off",
+        "entry.ceiling": "off",
+        "dining.chandelier": "off"
+      }
+    },
+    {
+      "wait": 1,
+      "event": { "type": "motion", "room": "living" },
+      "expect": { "living.ceiling": "standard", "kitchen.can": "standard", "entry.ceiling": "standard" }
+    },
+    {
+      "wait": 10,
+      "expect": { "living.ceiling": "standard", "kitchen.can": "off", "entry.ceiling": "off", "dining.chandelier": "off" }
+    },
+    {
+      "event": { "type": "button", "room": "living" },
+      "expect": { "living.ceiling": "off", "living.lamp": "off" }
+    }
+  ]
+}

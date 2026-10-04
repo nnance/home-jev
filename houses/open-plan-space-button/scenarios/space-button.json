@@ -1,0 +1,69 @@
+{
+  "name": "Whole-space button",
+  "description": "A button anywhere in the open space toggles every room in it; a standalone room's button still only affects that room.",
+  "start": {
+    "time": "20:00",
+    "levels": {
+      "kitchen.pendant": "soft"
+    }
+  },
+  "steps": [
+    {
+      "event": {
+        "type": "button",
+        "room": "living"
+      },
+      "expect": {
+        "kitchen.pendant": "off",
+        "living.ceiling": "off",
+        "kitchen.can": "off",
+        "office.ceiling": "off"
+      }
+    },
+    {
+      "event": {
+        "type": "button",
+        "room": "living"
+      },
+      "expect": {
+        "living.ceiling": "standard",
+        "kitchen.can": "standard",
+        "entry.ceiling": "standard",
+        "dining.chandelier": "standard",
+        "office.ceiling": "off",
+        "bedroom.ceiling": "off"
+      }
+    },
+    {
+      "event": {
+        "type": "button",
+        "room": "kitchen"
+      },
+      "expect": {
+        "living.ceiling": "off",
+        "kitchen.can": "off",
+        "entry.ceiling": "off",
+        "dining.chandelier": "off"
+      }
+    },
+    {
+      "event": {
+        "type": "button",
+        "room": "office"
+      },
+      "expect": {
+        "office.ceiling": "standard",
+        "kitchen.can": "off"
+      }
+    },
+    {
+      "event": {
+        "type": "button",
+        "room": "office"
+      },
+      "expect": {
+        "office.ceiling": "off"
+      }
+    }
+  ]
+}
