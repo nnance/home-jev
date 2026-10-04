@@ -1,0 +1,27 @@
+{
+  "name": "home-jev",
+  "version": "0.0.1",
+  "description": "Home Automation via Jev",
+  "keywords": [
+    "ai",
+    "home",
+    "automation",
+    "jev"
+  ],
+  "license": "ISC",
+  "author": "Nick Nance",
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node --env-file=.env dist/index.js",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
+    "@types/node": "^26.6.3",
+    "typescript": "^7.0.2"
+  }
+}

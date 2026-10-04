@@ -1,0 +1,92 @@
+{
+    "state": {
+        "house": {
+            "rooms": [
+                {
+                    "name": "Kitchen",
+                    "accessories": [
+                        {
+                            "name": "can",
+                            "description": "overhead dimmable can lights",
+                            "state": 0
+                        },
+                        {
+                            "name": "pendant",
+                            "description": "overhead dimmable pendant ligts",
+                            "state": 0
+                        },
+                        {
+                            "name": "blinds",
+                            "description": "0 is closed and 1 is open",
+                            "state": 0
+                        },
+                        {
+                            "name": "undercounter",
+                            "description": "under counter dimmable strip lighting",
+                            "state": 0
+                        },
+                        {
+                            "name": "motion detector"
+                        }
+                    ]
+                }
+            ],
+            "state": {
+                "asleep": true,
+                "isaway": false,
+                "time": "20:32:00"
+            },
+            "rules": [
+                "When the house is asleep use soft indirect lighting only",
+                "Only can lights and underounter lights should come on when motion is detected",
+                "Can lights should never be brighter than 60%"
+            ],
+            "event": {
+                "room": "kitchen",
+                "type": "motion detected"
+            }
+        }
+    },
+    "question": {
+        "action": {
+            "type": "choice",
+            "instructions": "Should an action be taken and if so which one?",
+            "criteria": {
+                "none": "No action needed",
+                "set_accessory": "Set the recommended value of an accessory in a room"
+            }
+        },
+        "which_room": {
+            "type": "choice",
+            "instructions": "Select the room to take action on",
+            "criteria": {
+                "none": "no room",
+                "kitchen": "kitchen",
+                "living": "living room",
+                "entry": "entry way"
+            }
+        },
+        "which_accessory": {
+            "type": "choice",
+            "instructions": "Following the rules of the house and based on the current state of the house, select the accessory to take action on",
+            "criteria": {
+                "none": "no accessory",
+                "can": "overhead dimmable can lights",
+                "pendent": "overhead dimmable pendant lights",
+                "blinds": "powered blinds",
+                "undercounter": "indirect dimmable strip lighting"
+            }
+        },
+        "recommend_value": {
+            "type": "choice",
+            "instructions": "Recommend the value to set the accessory to if action is needed",
+            "criteria": {
+                "null": "no change",
+                "0%": "the light is off or the blind is closed",
+                "30%": "soft lighting or slightly open blind",
+                "60%": "standard lighting or mostly open blind",
+                "100%": "full lighting or fully open blind"
+            }
+        }
+    }
+}
